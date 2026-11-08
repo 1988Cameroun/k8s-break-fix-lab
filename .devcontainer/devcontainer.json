@@ -1,0 +1,23 @@
+{
+  "name": "k8s-break-fix-lab",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  // A 3-node kind cluster fits in 8 GB; 4 cores makes it noticeably snappier.
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb"
+  },
+  "postCreateCommand": "bash .devcontainer/install-tools.sh",
+  "postStartCommand": "echo 'Run ./lab.sh up to create the cluster (or ./lab.sh list if it already exists).'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "redhat.vscode-yaml",
+        "timonwong.shellcheck"
+      ]
+    }
+  }
+}

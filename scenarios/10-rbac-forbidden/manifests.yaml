@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-10
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pod-watcher
+  namespace: lab-10
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader
+  namespace: lab-10
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pod-watcher-reads-pods
+  namespace: lab-10
+subjects:
+  - kind: ServiceAccount
+    name: pod-watcher
+    namespace: lab-10
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pod-reader
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-watcher
+  namespace: lab-10
+  labels:
+    app: pod-watcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pod-watcher
+  template:
+    metadata:
+      labels:
+        app: pod-watcher
+    spec:
+      serviceAccountName: pod-watcher
+      terminationGracePeriodSeconds: 2
+      containers:
+        - name: watcher
+          image: curlimages/curl:8.11.1
+          command:
+            - /bin/sh
+            - -c
+            - |
+              SA=/var/run/secrets/kubernetes.io/serviceaccount
+              NS=$(cat $SA/namespace)
+              URL="https://kubernetes.default.svc/api/v1/namespaces/$NS/pods"
+              while true; do
+                CODE=$(curl -s -o /tmp/resp -w '%{http_code}' --cacert $SA/ca.crt \
+                  -H "Authorization: Bearer $(cat $SA/token)" "$URL")
+                if [ "$CODE" = "200" ]; then
+                  echo "$(date -Iseconds) OK: listed pods in $NS (HTTP 200)"
+                  touch /tmp/healthy
+                else
+                  echo "$(date -Iseconds) ERROR: HTTP $CODE listing pods: $(grep -o '"message":"[^"]*"' /tmp/resp)"
+                  rm -f /tmp/healthy
+                fi
+                sleep 5
+              done
+          readinessProbe:
+            exec:
+              command: ["test", "-f", "/tmp/healthy"]
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 5m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }

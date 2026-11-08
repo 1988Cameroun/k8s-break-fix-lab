@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-07
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-07-data
+---
+# The shared pricing service, now living in its own namespace.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pricing
+  namespace: lab-07-data
+  labels:
+    app: pricing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pricing
+  template:
+    metadata:
+      labels:
+        app: pricing
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - name: http
+              containerPort: 80
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 200m, memory: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pricing
+  namespace: lab-07-data
+spec:
+  selector:
+    app: pricing
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders
+  namespace: lab-07
+  labels:
+    app: orders
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders
+  template:
+    metadata:
+      labels:
+        app: orders
+    spec:
+      terminationGracePeriodSeconds: 2
+      containers:
+        - name: orders
+          image: busybox:1.36
+          env:
+            - name: PRICING_URL
+              value: http://pricing
+          command:
+            - /bin/sh
+            - -c
+            - |
+              while true; do
+                if wget -qO- -T 3 "$PRICING_URL" >/dev/null 2>/tmp/err; then
+                  echo "$(date -Iseconds) OK: fetched prices from $PRICING_URL"
+                else
+                  echo "$(date -Iseconds) ERROR: cannot reach $PRICING_URL: $(cat /tmp/err)"
+                fi
+                sleep 10
+              done
+          # Only Ready when pricing is reachable.
+          readinessProbe:
+            exec:
+              command: ["/bin/sh", "-c", "wget -qO- -T 3 \"$PRICING_URL\" >/dev/null"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 32Mi }

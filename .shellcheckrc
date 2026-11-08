@@ -1,0 +1,4 @@
+# Follow `source` directives (paths are relative to the repo root).
+external-sources=true
+# Verify helpers are called indirectly through `check <fn>`.
+disable=SC2329

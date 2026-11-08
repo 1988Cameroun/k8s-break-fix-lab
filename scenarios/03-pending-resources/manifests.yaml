@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-03
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: report-generator
+  namespace: lab-03
+  labels:
+    app: report-generator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: report-generator
+  template:
+    metadata:
+      labels:
+        app: report-generator
+    spec:
+      terminationGracePeriodSeconds: 2
+      containers:
+        - name: worker
+          image: busybox:1.36
+          command: ["/bin/sh", "-c", "while true; do echo generating report; sleep 60; done"]
+          # Production sizing, copied into dev without review.
+          resources:
+            requests:
+              cpu: "64"
+              memory: 256Gi
+            limits:
+              cpu: "64"
+              memory: 256Gi

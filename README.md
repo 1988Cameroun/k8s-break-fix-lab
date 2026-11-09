@@ -11,8 +11,7 @@ cluster with one command. Each one comes with a ticket describing the symptom, t
 progressive hints, an automated check that tells you when it's really fixed, and a
 write-up of the root cause, the diagnosis and how to prevent it.
 
-Debugging is the skill that matters most when running Kubernetes, and the hardest one to
-practice without a broken production cluster. This lab gives you broken clusters on demand.
+Debugging is the skill that matters most when running Kubernetes, and the hardest one to practice without a broken production cluster. This lab gives you broken clusters on demand.
 
 ```console
 $ ./lab.sh start 04
